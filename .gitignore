@@ -1,0 +1,7 @@
+AI_seo/
+__pycache__/
+google_keywords/
+test/
+.env
+coverage/
+clustering_pipeline/cluster_data/
