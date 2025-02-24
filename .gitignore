@@ -5,3 +5,4 @@ test/
 .env
 coverage/
 clustering_pipeline/cluster_data/
+data/
