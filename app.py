@@ -10,6 +10,8 @@ from Agents.clusterURL_keyword import url_agent
 from prompts.keywords_prompt import prompt_keyword,prompt_keyword_suggestion
 from collections import defaultdict
 from utiles import flatten_seo_data , extract_first_json_object
+import asyncio
+
 app = FastAPI()
 
 def extract_keywords(json_string):
@@ -84,7 +86,7 @@ def keyword_suggestion(request: KeywordRequest):
     
 
 @app.post("/keyword_clustering")
-def keyword_clustering(file: UploadFile = File(...)):
+async def keyword_clustering(file: UploadFile = File(...)):
     try:
 
         # file_contents = file.file.read()
@@ -115,9 +117,9 @@ def keyword_clustering(file: UploadFile = File(...)):
         clusterer = Cluster(config)
         metadata_column = "Keyword"
   
-        results, optimal_cluter = clusterer.process_clustering(data, metadata_column)
+        results, optimal_cluster = clusterer.process_clustering(data, metadata_column)
         # print(results)
-        print(optimal_cluter)
+        print(optimal_cluster)
         results = json.loads(results)
 
         clusters = defaultdict(list)
@@ -132,18 +134,25 @@ def keyword_clustering(file: UploadFile = File(...)):
         
         structured_data = []
 
-        for cluster_id, items in clusters.items():
-            structure = url_agent(items=items)
-            json_data = extract_first_json_object(str(structure))
-            print(json_data)
-            structured_data.append(json_data)
+        # for cluster_id, items in clusters.items():
+        #     structure = await url_agent(items=items)
+        #     json_data = extract_first_json_object(str(structure))
+        #     print(json_data)
+        #     structured_data.append(json_data)
+        # Process clusters asynchronously
+        tasks = [url_agent(items=items) for items in clusters.values()]
+        structures = await asyncio.gather(*tasks)  # Run URL agent calls in parallel
+
+        # Process JSON responses
+        structured_data = [extract_first_json_object(str(structure)) for structure in structures]
+        print("Structured Data:", structured_data)
         
-        print(structured_data)
+        # print(structured_data)
         # structure_json = json.loads(structured_data)
         final_data = flatten_seo_data(structured_data)
-        print(final_data)
+        print("Final Data:", final_data)
 
-        return final_data
+        return {"clusters": final_data, "optimal_cluster": optimal_cluster}
 
 
     except ValueError as e:
